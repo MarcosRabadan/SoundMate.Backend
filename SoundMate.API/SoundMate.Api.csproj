@@ -8,11 +8,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <PackageReference Include="Microsoft.OpenApi" Version="3.9.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Harmony.Application\SoundMate.Application.csproj" />
-    <ProjectReference Include="..\Harmony.Infrastructure\SoundMate.Infrastructure.csproj" />
+    <ProjectReference Include="..\SoundMate.Application\SoundMate.Application.csproj" />
+    <ProjectReference Include="..\SoundMate.Infrastructure\SoundMate.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
