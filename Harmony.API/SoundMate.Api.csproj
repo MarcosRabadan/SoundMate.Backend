@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Harmony.Application\Harmony.Application.csproj" />
-    <ProjectReference Include="..\Harmony.Infrastructure\Harmony.Infrastructure.csproj" />
+    <ProjectReference Include="..\Harmony.Application\SoundMate.Application.csproj" />
+    <ProjectReference Include="..\Harmony.Infrastructure\SoundMate.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

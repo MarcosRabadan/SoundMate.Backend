@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="Harmony.Api/Harmony.Api.csproj" DisplayName="Harmony.API" Id="fbeea850-d8e1-4263-a810-7e2259a951f5" />
-    <Project Path="Harmony.Application/Harmony.Application.csproj" Id="3762b5e2-b46b-4eb0-9d97-8b237540e3dc" />
-    <Project Path="Harmony.Domain/Harmony.Domain.csproj" Id="ef6f028d-5d3e-44a7-bfd1-9679a2029b04" />
-    <Project Path="Harmony.Infrastructure/Harmony.Infrastructure.csproj" Id="1dba2198-a032-4a31-8aef-c17edb02fa68" />
-  </Folder>
-  <Folder Name="/test/" />
-</Solution>

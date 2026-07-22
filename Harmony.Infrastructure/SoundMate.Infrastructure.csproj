@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Harmony.Domain\Harmony.Domain.csproj" />
+    <ProjectReference Include="..\Harmony.Application\SoundMate.Application.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
