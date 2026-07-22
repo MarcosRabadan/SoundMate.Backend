@@ -1,4 +1,4 @@
-﻿namespace Harmony.Application
+﻿namespace SoundMate.Application
 {
     public class Class1
     {

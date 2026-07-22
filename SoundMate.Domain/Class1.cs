@@ -1,4 +1,4 @@
-﻿namespace Harmony.Domain
+﻿namespace SoundMate.Domain
 {
     public class Class1
     {

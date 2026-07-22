@@ -1,4 +1,4 @@
-﻿namespace Harmony.Infrastructure
+﻿namespace SoundMate.Infrastructure
 {
     public class Class1
     {

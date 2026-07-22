@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Harmony.API.Controllers
+namespace SoundMate.API.Controllers
 {
     [ApiController]
     [Route("[controller]")]

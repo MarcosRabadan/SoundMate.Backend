@@ -1,4 +1,4 @@
-namespace Harmony.API
+namespace SoundMate.API
 {
     public class WeatherForecast
     {
