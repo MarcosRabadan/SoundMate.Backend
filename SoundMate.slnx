@@ -5,5 +5,7 @@
     <Project Path="SoundMate.Domain/SoundMate.Domain.csproj" />
     <Project Path="SoundMate.Infrastructure/SoundMate.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/test/" />
+  <Folder Name="/test/">
+    <Project Path="test/SoundMate.Domain.Tests/SoundMate.Domain.Tests.csproj" />
+  </Folder>
 </Solution>
