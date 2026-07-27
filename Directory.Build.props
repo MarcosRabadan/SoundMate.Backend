@@ -1,0 +1,9 @@
+<Project>
+
+  <!-- Single source of truth for the version across every project (SemVer: MAJOR.MINOR.PATCH). -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Product>SoundMate</Product>
+  </PropertyGroup>
+
+</Project>
