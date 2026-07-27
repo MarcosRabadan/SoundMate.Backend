@@ -28,6 +28,9 @@ public sealed class SoundMateDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Enables the citext type used for case-insensitive email uniqueness.
+        modelBuilder.HasPostgresExtension("citext");
+
         // Each aggregate's mapping lives in its own IEntityTypeConfiguration under Configurations/.
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(SoundMateDbContext).Assembly);
         base.OnModelCreating(modelBuilder);

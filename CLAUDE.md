@@ -28,12 +28,20 @@ dotnet test                                        # run all tests
 dotnet test --filter "FullyQualifiedName~Namespace.ClassName.MethodName"   # single test
 ```
 
-EF Core (code-first). The design-time factory lets these run without starting the API:
+EF Core (code-first, PostgreSQL/Npgsql). Migrations use **the API as the startup project** (it holds
+the `Microsoft.EntityFrameworkCore.Design` package; there is no design-time factory). The connection
+string lives in **user-secrets**, never committed — `appsettings.json` only has a placeholder — so
+commands that hit the DB need the Development environment for the secret to load:
 
 ```
-dotnet ef migrations add <Name> --project SoundMate.Infrastructure --startup-project SoundMate.Infrastructure --output-dir Persistence/Migrations
-dotnet ef database update      --project SoundMate.Infrastructure --startup-project SoundMate.Infrastructure
-dotnet ef migrations has-pending-model-changes --project SoundMate.Infrastructure --startup-project SoundMate.Infrastructure
+dotnet ef migrations add <Name> --project SoundMate.Infrastructure --startup-project SoundMate.API --output-dir Persistence/Migrations
+$env:ASPNETCORE_ENVIRONMENT="Development"; dotnet ef database update --project SoundMate.Infrastructure --startup-project SoundMate.API
+dotnet ef migrations has-pending-model-changes --project SoundMate.Infrastructure --startup-project SoundMate.API
+```
+
+Set the connection string once per developer (stored outside the repo):
+```
+dotnet user-secrets set "ConnectionStrings:SoundMate" "Host=localhost;Port=5432;Database=soundmate;Username=postgres;Password=..." --project SoundMate.API
 ```
 
 ## Architecture
@@ -48,7 +56,18 @@ Clean Architecture across four projects, referenced one direction only (outer �
 - **SoundMate.API** — references Application + Infrastructure. ASP.NET Core Web API.
 
 All projects target `net10.0` with `Nullable` and `ImplicitUsings` enabled. Solution file is
-`SoundMate.slnx` (XML slnx format). Database is **SQL Server**.
+`SoundMate.slnx` (XML slnx format).
+
+## Database (PostgreSQL)
+
+- **PostgreSQL** via the **Npgsql** EF Core provider (`UseNpgsql`). Local dev DB is `soundmate`.
+- Email uniqueness relies on the **`citext`** type (case-insensitive) — Postgres is case-sensitive by
+  default, unlike SQL Server. The `citext` extension is enabled in `OnModelCreating`
+  (`HasPostgresExtension("citext")`).
+- Tables/columns are created with **quoted PascalCase** names (`"Users"`, `"Disciplines"`), so raw SQL
+  must double-quote them — `SELECT * FROM "Disciplines"`, not `FROM Disciplines` (Postgres lowercases
+  unquoted identifiers).
+- Check constraints in configurations use Postgres identifier quoting (`"Stars" >= 1 AND ...`).
 
 ## Domain conventions (follow these)
 
@@ -59,10 +78,10 @@ All projects target `net10.0` with `Nullable` and `ImplicitUsings` enabled. Solu
   state — errors fail fast at construction, not late at `SaveChanges`. Use `Common.Guard` for
   guard clauses; throw `DomainException` on invariant violations.
 - **Strongly-typed IDs** (`UserId`, `AcademyId`, ...): `readonly record struct` wrapping a `Guid`,
-  with `New()`/`From()`. Backed by `uniqueidentifier` in the DB. Factories generate the Id, so it
-  is never forgotten; `Entity.Id` is `protected set` (immutable from outside).
+  with `New()`/`From()`. Backed by `uuid` in the DB. Factories generate the Id, so it is never
+  forgotten; `Entity.Id` is `protected set` (immutable from outside).
 - **Value Objects** for things with rules: `Email` (validates + normalizes; equality is
-  case-insensitive to keep one email = one global person) and `Slug`.
+  case-insensitive to keep one email = one global person; stored as `citext`) and `Slug`.
 - **Aggregates reference each other by identity**, never by navigation (e.g. `Membership` holds
   `UserId` + `AcademyId`). **No enforced cross-aggregate FKs** — only indexes — to keep a future
   DB-per-service split cheap.
@@ -73,8 +92,8 @@ All projects target `net10.0` with `Nullable` and `ImplicitUsings` enabled. Solu
   IDs are mapped with `HasConversion`.
 - **Language**: code and identifiers in English; XML `/// <summary>` on every entity, plus comments
   only where the *why* is non-obvious (not on trivial members).
-- **Time**: everything UTC, `datetime2`. Enums stored as `int` with **explicit values**
-  (reordering must not corrupt data).
+- **Time**: everything UTC, `timestamp with time zone` (`DateTime.UtcNow` in factories). Enums stored
+  as `int` with **explicit values** (reordering must not corrupt data).
 - **Catalogs** (`Discipline`, `Genre`) are reference data seeded via `HasData` with **stable GUIDs**
   grouped by category. Never delete a catalog row — soft-hide with `IsActive`.
 
@@ -100,10 +119,11 @@ the domain.
 
 ## Current state
 
-Built: full domain model + EF configurations + one `InitialIdentity` migration (seeded catalogs)
-+ repositories for all aggregates + the domain test suite.
+Done: full rich domain model + EF configurations + `InitialIdentity` migration (seeded catalogs) +
+repositories for **all 11 aggregates** + the domain test suite (129 tests). DI is **wired**
+(`AddInfrastructure` registers the `DbContext`, all repositories and `IUnitOfWork`; called from the
+API's `Program.cs`). The migration has been **applied to a real PostgreSQL database**.
 
-Pending: register `DbContext`/repositories in DI (`AddInfrastructure` + API wiring), apply the
-migration to SQL Server, clean the API template leftovers (`WeatherForecast*`, default `Program.cs`),
-and build the Application use cases (which also need timestamps set — e.g. a `SaveChanges`
-interceptor — and the Agendia integration).
+Pending: clean the API template leftover (`WeatherForecast*`), and build the Application layer —
+use cases (e.g. register user, create academy), the API endpoints that call them, a **`SaveChanges`
+interceptor** to fill `CreatedAtUtc`/`UpdatedAtUtc`, and the **Agendia** integration.

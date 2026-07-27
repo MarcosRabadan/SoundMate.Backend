@@ -12,7 +12,7 @@ internal sealed class TeacherReviewConfiguration : IEntityTypeConfiguration<Teac
     {
         // Stars are constrained to 1-5 at the database level.
         builder.ToTable("TeacherReviews", t =>
-            t.HasCheckConstraint("CK_TeacherReviews_Stars", "[Stars] >= 1 AND [Stars] <= 5"));
+            t.HasCheckConstraint("CK_TeacherReviews_Stars", "\"Stars\" >= 1 AND \"Stars\" <= 5"));
 
         builder.HasKey(r => r.Id);
 

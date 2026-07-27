@@ -12,7 +12,7 @@ internal sealed class UserEducationConfiguration : IEntityTypeConfiguration<User
         builder.ToTable("UserEducations", t =>
             t.HasCheckConstraint(
                 "CK_UserEducations_Years",
-                "[StartYear] IS NULL OR [EndYear] IS NULL OR [EndYear] >= [StartYear]"));
+                "\"StartYear\" IS NULL OR \"EndYear\" IS NULL OR \"EndYear\" >= \"StartYear\""));
 
         builder.HasKey(e => e.Id);
 

@@ -16,11 +16,11 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasConversion(id => id.Value, value => UserId.From(value))
             .ValueGeneratedNever();
 
-        // The unique index is case-insensitive thanks to SQL Server's default collation,
-        // so ana@ and ANA@ collide.
+        // Stored as citext (case-insensitive text) so the unique index treats ana@ and ANA@
+        // as the same email. Postgres is case-sensitive by default, unlike SQL Server.
         builder.Property(u => u.Email)
             .HasConversion(email => email.Value, value => Email.Create(value))
-            .HasMaxLength(Email.MaxLength)
+            .HasColumnType("citext")
             .IsRequired();
 
         builder.HasIndex(u => u.Email).IsUnique();
