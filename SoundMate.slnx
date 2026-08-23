@@ -10,5 +10,6 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/SoundMate.Domain.Tests/SoundMate.Domain.Tests.csproj" />
+    <Project Path="test/SoundMate.Infrastructure.Tests/SoundMate.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>

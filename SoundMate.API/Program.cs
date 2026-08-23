@@ -1,9 +1,11 @@
 using SoundMate.Infrastructure;
+using SoundMate.Infrastructure.Agendia;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("SoundMate")!);
+builder.Services.AddAgendiaIntegration(builder.Configuration);
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
