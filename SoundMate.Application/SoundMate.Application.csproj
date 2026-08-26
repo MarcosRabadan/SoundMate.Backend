@@ -4,6 +4,24 @@
     <ProjectReference Include="..\SoundMate.Domain\SoundMate.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- No AutoMapper. Its DoS advisory (GHSA-rvv3-g6hj-g44x) is only fixed from 15.1.1 / 16.1.1,
+         which are past the point where it stopped being MIT, so every free version is affected.
+         And it was earning nothing here: typed ids and value objects meant every member had to be
+         mapped explicitly anyway. Mapping is hand-written in UserMapper, which is also stricter -
+         the DTOs use `required`, so a forgotten field does not compile.
+
+         FluentValidation.AspNetCore is NOT used either: it stopped at 11.3.1 and never followed
+         FluentValidation 12, so the MVC auto-validation integration is abandoned. The API wires
+         validation through its own action filter instead. -->
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SoundMate.Application.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
