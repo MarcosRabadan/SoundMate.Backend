@@ -42,6 +42,20 @@ dotnet test                                        # run all tests
 dotnet test --filter "FullyQualifiedName~Namespace.ClassName.MethodName"   # single test
 ```
 
+Local infrastructure runs in **Docker** (`deploy/`, see its README): PostgreSQL **5434**, Seq
+**5342**, RabbitMQ **15673**. The ports are offset from Agendia's on purpose — both microservices
+are developed at the same time, and 5432 is taken by a native PostgreSQL.
+
+```
+cd deploy && docker compose up -d                         # infra only; the API runs with dotnet run
+cd deploy && docker compose --profile app up -d --build   # infra + the API in a container (8080)
+cd deploy && docker compose down                          # stop, keeping the volumes
+```
+
+The API container sits behind a **profile**, so a plain `up -d` does not start it: the daily loop is
+`dotnet run` against containerized infra. It applies **no migrations at startup** — you still run
+`dotnet ef database update` from the host against 5434.
+
 EF Core (code-first, PostgreSQL/Npgsql). Migrations use **the API as the startup project** (it holds
 the `Microsoft.EntityFrameworkCore.Design` package; there is no design-time factory). The connection
 string lives in **user-secrets**, never committed — `appsettings.json` only has a placeholder — so
@@ -55,7 +69,7 @@ dotnet ef migrations has-pending-model-changes --project SoundMate.Infrastructur
 
 Set the connection string once per developer (stored outside the repo):
 ```
-dotnet user-secrets set "ConnectionStrings:SoundMate" "Host=localhost;Port=5432;Database=soundmate;Username=postgres;Password=..." --project SoundMate.API
+dotnet user-secrets set "ConnectionStrings:SoundMate" "Host=localhost;Port=5434;Database=soundmate;Username=soundmate;Password=soundmate" --project SoundMate.API
 ```
 
 ## Architecture
@@ -74,7 +88,9 @@ All projects target `net10.0` with `Nullable` and `ImplicitUsings` enabled. Solu
 
 ## Database (PostgreSQL)
 
-- **PostgreSQL** via the **Npgsql** EF Core provider (`UseNpgsql`). Local dev DB is `soundmate`.
+- **PostgreSQL** via the **Npgsql** EF Core provider (`UseNpgsql`). Local dev DB is `soundmate`,
+  in the **`soundmate-postgres` container on port 5434** (`deploy/docker-compose.yml`), user/password
+  `soundmate`. A native PostgreSQL still holds 5432 and Agendia's container holds 5433.
 - Email uniqueness relies on the **`citext`** type (case-insensitive) — Postgres is case-sensitive by
   default, unlike SQL Server. The `citext` extension is enabled in `OnModelCreating`
   (`HasPostgresExtension("citext")`).
@@ -144,9 +160,24 @@ client-credentials, caches the short-lived token, and checks the connection thro
 **Development only** — SoundMate has no authentication yet, so it would otherwise publish our
 clientId anonymously; gate it behind an admin policy once auth lands rather than deleting it.
 
-Pending: clean the API template leftover (`WeatherForecast*`), and build the Application layer —
-use cases (e.g. register user, create academy), the API endpoints that call them, a **`SaveChanges`
-interceptor** to fill `CreatedAtUtc`/`UpdatedAtUtc`, **signing the user JWTs** Agendia expects
+Done, on **Docker** (`deploy/`): `docker-compose.yml` with PostgreSQL, Seq and RabbitMQ, plus
+`SoundMate.API/Dockerfile` (multi-stage, non-root, HTTP-only on 8080) behind the `app` profile.
+The compose project is named `soundmate` explicitly — Docker would derive it from the folder, and
+Agendia's compose also lives in a folder called `deploy`, so they would share a project and a
+`down` in one repo would reach into the other. Seq and RabbitMQ are up but **not wired** yet: no
+Serilog, no event transport.
+
+From inside the container Agendia is `https://host.docker.internal:7097` — `localhost` there is the
+container itself. That hop needs `Agendia:DangerousAcceptAnyServerCertificate`, off by default and
+set **only** in `deploy/docker-compose.yml`: Agendia's HTTP port answers `307` to the HTTPS one, and
+the ASP.NET dev certificate fails twice over — issued for `localhost`, and its CA is not in the
+container's trust store. The problem is the local certificate, not Agendia. Verified end to end:
+`GET /api/agendia/connection` from the container returns `succeeded: true`, `subject: soundmate`,
+`tokenUse: service`.
+
+Pending: build the Application layer — use cases (e.g. register user, create academy), the API
+endpoints that call them, a **`SaveChanges` interceptor** to fill `CreatedAtUtc`/`UpdatedAtUtc`,
+**signing the user JWTs** Agendia expects
 (HS256 with the shared key, `iss` `SoundMate`, `aud` `MRC.Agendia.Clients`, and the SHORT `sub`
 and `role` claims — the long claim URIs authenticate but then fail every authorization check in
 Agendia), and the **provisioning bridge** `Academy`→`Business` / `Membership`→`Employee`.

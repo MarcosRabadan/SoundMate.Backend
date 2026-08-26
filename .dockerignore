@@ -1,0 +1,35 @@
+# Lo que NO entra en el contexto de build de Docker.
+#
+# Sin este archivo, `docker build` empaqueta y sube al daemon los bin/obj compilados en
+# Windows (cientos de MB) y ademas los mete en la imagen, donde chocan con la compilacion
+# Linux que hace el propio Dockerfile. El build seria lento y el resultado, impredecible.
+
+# Salidas de compilacion: la imagen se compila sola dentro del contenedor
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# Git y CI
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Editores e IDE
+.vs/
+.vscode/
+.idea/
+**/*.user
+**/*.suo
+**/*.userprefs
+
+# Documentacion y herramientas: no intervienen en el build
+docs/
+deploy/
+.claude/
+**/*.md
+
+# Secretos locales: nunca deben acabar dentro de una imagen
+**/.env
+**/secrets.json

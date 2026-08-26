@@ -22,7 +22,13 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference(options => options.WithTitle("SoundMate API"));
 }
 
-app.UseHttpsRedirection();
+// Inside a container the app listens on HTTP only: the ASP.NET dev certificate is not there
+// and TLS is the reverse proxy's job. Redirecting would bounce every request to a port nobody
+// is listening on. DOTNET_RUNNING_IN_CONTAINER is set by the official .NET base images.
+if (!app.Configuration.GetValue<bool>("DOTNET_RUNNING_IN_CONTAINER"))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 

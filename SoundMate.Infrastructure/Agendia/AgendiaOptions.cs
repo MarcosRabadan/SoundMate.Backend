@@ -25,4 +25,21 @@ public class AgendiaOptions
     /// mid-flight.
     /// </summary>
     public int ExpirySafetyMarginSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// Skips TLS certificate validation on every call to Agendia. <b>Development only.</b>
+    /// <para>
+    /// It exists for one situation: SoundMate in a container while Agendia runs on the host.
+    /// Agendia redirects HTTP to <c>https://host.docker.internal:7097</c>, and the ASP.NET
+    /// development certificate was issued for <c>localhost</c> — wrong name, and its CA is not in
+    /// the container's trust store either. Both failures are about the local certificate, not
+    /// about Agendia.
+    /// </para>
+    /// <para>
+    /// On in production it would accept any certificate from anyone and hand our service token to
+    /// whoever answered. It stays off unless something sets it, and the only thing that does is
+    /// <c>deploy/docker-compose.yml</c>.
+    /// </para>
+    /// </summary>
+    public bool DangerousAcceptAnyServerCertificate { get; set; }
 }
