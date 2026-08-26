@@ -11,20 +11,6 @@ namespace SoundMate.Application.Users.Validators;
 /// </summary>
 public sealed class RegisterUserDtoValidator : AbstractValidator<RegisterUserDto>
 {
-    /// <summary>Short enough to be memorable, long enough not to be guessable.</summary>
-    public const int MinPasswordLength = 8;
-
-    /// <summary>
-    /// PBKDF2 has no practical input limit, but an unbounded password is free CPU for whoever
-    /// sends it: every attempt costs us a full key derivation.
-    /// </summary>
-    public const int MaxPasswordLength = 128;
-
-    // These mirror the column widths in UserConfiguration. Duplicated on purpose: catching it
-    // here is a 400 with the offending field, catching it there is a database error.
-    private const int MaxFullNameLength = 200;
-    private const int MaxPhoneLength = 30;
-
     public RegisterUserDtoValidator()
     {
         // Email.IsValid, not FluentValidation's EmailAddress(): the built-in one only checks for
@@ -37,18 +23,10 @@ public sealed class RegisterUserDtoValidator : AbstractValidator<RegisterUserDto
             .MaximumLength(Email.MaxLength)
             .Must(Email.IsValid).WithMessage("Email is not a valid format.");
 
-        RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Password is required.")
-            .MinimumLength(MinPasswordLength)
-                .WithMessage($"Password must be at least {MinPasswordLength} characters.")
-            .MaximumLength(MaxPasswordLength);
+        RuleFor(x => x.Password).Password();
 
-        RuleFor(x => x.FullName)
-            .NotEmpty().WithMessage("Full name is required.")
-            .MaximumLength(MaxFullNameLength);
+        RuleFor(x => x.FullName).FullName();
 
-        RuleFor(x => x.Phone)
-            .MaximumLength(MaxPhoneLength)
-            .When(x => !string.IsNullOrWhiteSpace(x.Phone));
+        RuleFor(x => x.Phone).Phone();
     }
 }

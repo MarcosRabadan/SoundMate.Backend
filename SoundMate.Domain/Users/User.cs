@@ -15,6 +15,22 @@ public sealed class User : AggregateRoot<UserId>
     public string FullName { get; private set; } = default!;
     public string? Phone { get; private set; }
     public UserStatus Status { get; private set; }
+
+    /// <summary>
+    /// When the user was soft-deleted, or <c>null</c> while they are still here.
+    /// <para>
+    /// Deliberately <b>not</b> a <see cref="UserStatus"/> value. Suspension is a moderation call
+    /// about a person who still exists; deletion is a lifecycle fact about the record. Folding
+    /// them into one enum would mean deleting a suspended user forgets they were suspended, and
+    /// restoring them would have to guess. As two independent facts, restore is exact.
+    /// </para>
+    /// <para>A date rather than a flag, because "when" is what a retention or purge policy needs.</para>
+    /// </summary>
+    public DateTime? DeletedAtUtc { get; private set; }
+
+    /// <summary>True once <see cref="Delete"/> ran and <see cref="Restore"/> has not.</summary>
+    public bool IsDeleted => DeletedAtUtc is not null;
+
     public DateTime? EmailVerifiedAtUtc { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
@@ -47,38 +63,78 @@ public sealed class User : AggregateRoot<UserId>
 
     public void Rename(string fullName)
     {
+        EnsureNotDeleted();
         FullName = Guard.NotNullOrWhiteSpace(fullName, "Full name");
         Touch();
     }
 
     public void ChangePhone(string? phone)
     {
+        EnsureNotDeleted();
         Phone = Normalize(phone);
         Touch();
     }
 
     public void ChangePasswordHash(string passwordHash)
     {
+        EnsureNotDeleted();
         PasswordHash = Guard.NotNullOrWhiteSpace(passwordHash, "Password hash");
         Touch();
     }
 
     public void VerifyEmail()
     {
+        EnsureNotDeleted();
         EmailVerifiedAtUtc = DateTime.UtcNow;
         Touch();
     }
 
     public void Suspend()
     {
+        EnsureNotDeleted();
         Status = UserStatus.Suspended;
         Touch();
     }
 
     public void Reactivate()
     {
+        EnsureNotDeleted();
         Status = UserStatus.Active;
         Touch();
+    }
+
+    /// <summary>
+    /// Soft-deletes the user. The row survives, which is the point: eight tables reference this
+    /// <c>UserId</c> without a foreign key, so removing it for real would leave every one of them
+    /// pointing at nothing.
+    /// <para>Idempotent — deleting twice does not move the date.</para>
+    /// </summary>
+    public void Delete()
+    {
+        if (IsDeleted)
+            return;
+
+        DeletedAtUtc = DateTime.UtcNow;
+        Touch();
+    }
+
+    /// <summary>
+    /// Brings a soft-deleted user back exactly as they were, suspension included: deleting never
+    /// touched <see cref="Status"/>, so there is nothing to reconstruct. Idempotent.
+    /// </summary>
+    public void Restore()
+    {
+        if (!IsDeleted)
+            return;
+
+        DeletedAtUtc = null;
+        Touch();
+    }
+
+    private void EnsureNotDeleted()
+    {
+        if (IsDeleted)
+            throw new DomainException("A deleted user cannot be modified. Restore them first.");
     }
 
     private void Touch() => UpdatedAtUtc = DateTime.UtcNow;

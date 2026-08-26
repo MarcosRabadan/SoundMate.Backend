@@ -33,8 +33,19 @@ internal sealed class GlobalExceptionHandler : IExceptionHandler
     {
         var (status, title, detail) = exception switch
         {
+            UserNotFoundException e =>
+                (StatusCodes.Status404NotFound, "User not found", e.Message),
+
             EmailAlreadyRegisteredException e =>
                 (StatusCodes.Status409Conflict, "Email already registered", e.Message),
+
+            UserStillHasMembershipsException e =>
+                (StatusCodes.Status409Conflict, "User still has memberships", e.Message),
+
+            // 400, not 401: the caller is not failing to authenticate, they are supplying a wrong
+            // value in a field of a request. SoundMate has no authentication to fail yet anyway.
+            IncorrectPasswordException e =>
+                (StatusCodes.Status400BadRequest, "Incorrect password", e.Message),
 
             ValidationException e =>
                 (StatusCodes.Status400BadRequest, "Validation failed", e.Message),

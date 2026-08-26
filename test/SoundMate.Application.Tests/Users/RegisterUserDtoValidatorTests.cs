@@ -54,7 +54,7 @@ public class RegisterUserDtoValidatorTests
     {
         // Not a style rule: every attempt costs a full PBKDF2 derivation, so an unbounded
         // password is free CPU for whoever sends it.
-        var tooLong = new string('a', RegisterUserDtoValidator.MaxPasswordLength + 1);
+        var tooLong = new string('a', UserRules.MaxPasswordLength + 1);
 
         _validator.TestValidate(Valid() with { Password = tooLong })
                   .ShouldHaveValidationErrorFor(x => x.Password);

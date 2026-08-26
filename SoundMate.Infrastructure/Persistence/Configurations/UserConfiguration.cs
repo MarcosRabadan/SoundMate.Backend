@@ -37,5 +37,14 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.Status)
             .HasConversion<int>();
+
+        // Computed from DeletedAtUtc, so there is nothing to store. Spelled out rather than left
+        // to convention: a read-only property that EF decides to map is a confusing migration.
+        builder.Ignore(u => u.IsDeleted);
+
+        // Partial index: only the rows that are still alive. Every normal query wants those, and
+        // Postgres keeps the index the size of the live set rather than the whole table.
+        builder.HasIndex(u => u.DeletedAtUtc)
+            .HasFilter("\"DeletedAtUtc\" IS NULL");
     }
 }
