@@ -29,18 +29,25 @@ public class AgendiaController : ControllerBase
     /// anonymous endpoint publishing our clientId and the accepted issuer. Once authentication
     /// lands, replace the environment check with an admin-only policy - do not simply delete it.
     ///
-    /// A failure is reported as 200 with `succeeded: false` and the reason, because the question
-    /// being asked is "does the connection work", and an exception would answer it worse.
+    /// A failure answers **503** and still carries the body: the reason is the valuable part, and
+    /// an exception would answer worse. But the status has to say it too - a monitor, a curl or an
+    /// EnsureSuccessStatusCode would otherwise read a broken integration as green. Same contract
+    /// as an ASP.NET health check: 200 healthy, 503 unhealthy, details in the body.
     /// </remarks>
     /// <param name="cancellationToken">Token to cancel the call.</param>
     [HttpGet("connection")]
     [ProducesResponseType(typeof(AgendiaConnectionCheck), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AgendiaConnectionCheck), StatusCodes.Status503ServiceUnavailable)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AgendiaConnectionCheck>> CheckConnection(CancellationToken cancellationToken)
     {
         if (!_environment.IsDevelopment())
             return NotFound();
 
-        return Ok(await _agendia.CheckConnectionAsync(cancellationToken));
+        var check = await _agendia.CheckConnectionAsync(cancellationToken);
+
+        return check.Succeeded
+            ? Ok(check)
+            : StatusCode(StatusCodes.Status503ServiceUnavailable, check);
     }
 }
