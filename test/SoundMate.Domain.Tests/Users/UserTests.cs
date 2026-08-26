@@ -95,4 +95,123 @@ public class UserTests
         user.ChangePhone(null);
         user.Phone.ShouldBeNull();
     }
+
+    // ------------------------------------------------------------------ soft delete
+
+    [Fact]
+    public void Register_IsNotDeleted()
+    {
+        var user = ARegisteredUser();
+
+        user.IsDeleted.ShouldBeFalse();
+        user.DeletedAtUtc.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Delete_StampsTheDate()
+    {
+        var user = ARegisteredUser();
+
+        user.Delete();
+
+        user.IsDeleted.ShouldBeTrue();
+        user.DeletedAtUtc.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Delete_Twice_DoesNotMoveTheDate()
+    {
+        var user = ARegisteredUser();
+
+        user.Delete();
+        var first = user.DeletedAtUtc;
+        user.Delete();
+
+        user.DeletedAtUtc.ShouldBe(first);
+    }
+
+    [Fact]
+    public void Restore_ClearsTheDate()
+    {
+        var user = ARegisteredUser();
+        user.Delete();
+
+        user.Restore();
+
+        user.IsDeleted.ShouldBeFalse();
+        user.DeletedAtUtc.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Restore_OnALiveUser_DoesNothing()
+        => Should.NotThrow(() => ARegisteredUser().Restore());
+
+    [Fact]
+    public void Delete_DoesNotTouchTheStatus()
+    {
+        // The two are independent facts. Suspension is a moderation decision about a person who
+        // is still here; deletion is a lifecycle fact about the record.
+        var user = ARegisteredUser();
+        user.Suspend();
+
+        user.Delete();
+
+        user.Status.ShouldBe(UserStatus.Suspended);
+    }
+
+    [Fact]
+    public void Restore_BringsBackTheSuspension()
+    {
+        // The reason the two are separate: folding deletion into UserStatus would lose this.
+        var user = ARegisteredUser();
+        user.Suspend();
+        user.Delete();
+
+        user.Restore();
+
+        user.Status.ShouldBe(UserStatus.Suspended);
+        user.IsDeleted.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Delete_OnAnActiveUser_LeavesThemActive()
+    {
+        var user = ARegisteredUser();
+
+        user.Delete();
+
+        user.Status.ShouldBe(UserStatus.Active);
+    }
+
+    public static TheoryData<string, Action<User>> Mutations => new()
+    {
+        { "Rename", u => u.Rename("Otro Nombre") },
+        { "ChangePhone", u => u.ChangePhone("600999888") },
+        { "ChangePasswordHash", u => u.ChangePasswordHash("otro-hash") },
+        { "VerifyEmail", u => u.VerifyEmail() },
+        { "Suspend", u => u.Suspend() },
+        { "Reactivate", u => u.Reactivate() }
+    };
+
+    [Theory]
+    [MemberData(nameof(Mutations))]
+    public void ADeletedUser_CannotBeModified(string name, Action<User> mutate)
+    {
+        var user = ARegisteredUser();
+        user.Delete();
+
+        Should.Throw<DomainException>(() => mutate(user),
+            $"{name} should be refused on a deleted user.");
+    }
+
+    [Theory]
+    [MemberData(nameof(Mutations))]
+    public void ARestoredUser_CanBeModifiedAgain(string name, Action<User> mutate)
+    {
+        var user = ARegisteredUser();
+        user.Delete();
+        user.Restore();
+
+        Should.NotThrow(() => mutate(user), $"{name} should work again after a restore.");
+    }
 }

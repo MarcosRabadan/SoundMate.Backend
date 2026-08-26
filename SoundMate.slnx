@@ -25,6 +25,7 @@
     <Project Path="SoundMate.Infrastructure/SoundMate.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/SoundMate.Application.Tests/SoundMate.Application.Tests.csproj" />
     <Project Path="test/SoundMate.Domain.Tests/SoundMate.Domain.Tests.csproj" />
     <Project Path="test/SoundMate.Infrastructure.Tests/SoundMate.Infrastructure.Tests.csproj" />
   </Folder>

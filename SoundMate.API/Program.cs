@@ -1,18 +1,32 @@
 using Scalar.AspNetCore;
+using SoundMate.API.Filters;
+using SoundMate.API.Middleware;
+using SoundMate.Application;
 using SoundMate.Infrastructure;
 using SoundMate.Infrastructure.Agendia;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("SoundMate")!);
 builder.Services.AddAgendiaIntegration(builder.Configuration);
 
-builder.Services.AddControllers();
+// Registered globally so no endpoint has to remember to validate its input.
+builder.Services.AddControllers(options => options.Filters.Add<ValidationFilter>());
+
+// AddProblemDetails supplies the IProblemDetailsService the handler writes through, so every
+// error leaves as the same RFC 7807 shape.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// First in the pipeline: it can only catch what happens after it.
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

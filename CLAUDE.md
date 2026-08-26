@@ -141,11 +141,42 @@ All projects target `net10.0` with `Nullable` and `ImplicitUsings` enabled. Solu
   rating shown is the **average of reviews**, computed on the fly (compute now, cache later only if
   reads hurt) — never a hand-set field.
 
+## Application conventions (follow these)
+
+- **Controller → Service → Repository. No MediatR.** Agendia has one, but its 61 handlers are
+  1–3 line pass-throughs to 30 services and it has exactly one behavior, so 122 files buy a hook
+  for FluentValidation that a 30-line action filter gives for free. Do not add a Command/Handler
+  pair per operation here; the service *is* the use case. Agendia will be revisited separately.
+- **No AutoMapper. Map by hand** (`Users/UserMapper.cs`, static extension methods). Its DoS
+  advisory GHSA-rvv3-g6hj-g44x is only fixed from 15.1.1/16.1.1, past the point where it stopped
+  being MIT — every free version is affected. It also earned nothing here: typed ids and value
+  objects force every member to be declared explicitly anyway.
+- **Response DTOs use `required` on everything that is not optional.** That is what replaces
+  AutoMapper's `AssertConfigurationIsValid`: a forgotten field is `error CS9035` at build time.
+- **Validation is FluentValidation, run by `API/Filters/ValidationFilter.cs`**, registered globally
+  so no endpoint has to remember. Not `FluentValidation.AspNetCore` — it stopped at 11.3.1 and
+  never followed FluentValidation 12.
+- **One rule, one place.** A validator must not restate a domain rule in its own words: expose the
+  check on the value object (`Email.IsValid`) and call it. FluentValidation's `.EmailAddress()`
+  accepts `missing@domain`, `Email.Create` does not, and that gap sent malformed input past the
+  400 and into a thrown invariant.
+- **Errors:** `DomainException` → 400, conflicts over existing state → 409, everything else → 500
+  with a **generic** detail (`GlobalExceptionHandler`). Never put an unexpected exception's message
+  on the wire.
+- **Persistence errors get translated in Infrastructure, never sniffed in Application.** `UnitOfWork`
+  turns Postgres' 23505 into `UniqueConstraintViolationException`; Application references neither
+  EF Core nor Npgsql. A uniqueness check followed by a save is not atomic, so any use case that
+  does one must also handle losing the race — otherwise it is a 500.
+
 ## Testing
 
 `test/SoundMate.Domain.Tests` (xUnit + Shouldly). Domain tests are pure (no DB, no mocks) and must
 cover **every invariant — both happy path and each guard/failure**. Keep them green when changing
 the domain.
+
+`test/SoundMate.Application.Tests` uses **hand-written fakes, no mocking library** — the same style
+as `SoundMate.Infrastructure.Tests`. `FakeUnitOfWork.FailWithUniqueViolationOn` exists to reach the
+lost-race path, which no amount of in-memory set-up reproduces on its own.
 
 ## Current state
 
@@ -175,9 +206,37 @@ container's trust store. The problem is the local certificate, not Agendia. Veri
 `GET /api/agendia/connection` from the container returns `succeeded: true`, `subject: soundmate`,
 `tokenUse: service`.
 
-Pending: build the Application layer — use cases (e.g. register user, create academy), the API
-endpoints that call them, a **`SaveChanges` interceptor** to fill `CreatedAtUtc`/`UpdatedAtUtc`,
-**signing the user JWTs** Agendia expects
+Done, on the **Application layer** (issue #6): `AddApplication()`, a global `ValidationFilter`, a
+`GlobalExceptionHandler`, `Pbkdf2PasswordHasher`, and the full `User` surface — register, read by
+id, read by email, update, change password, verify email, suspend, reactivate, delete, restore and
+purge. `test/SoundMate.Application.Tests` is a new project (hand-written fakes, no mocking library,
+matching `SoundMate.Infrastructure.Tests`). 260 tests green.
+
+**A user has two independent states, and conflating them is the mistake to avoid.** `Status`
+(`Active`/`Suspended`) is a moderation decision about somebody who is still here. `DeletedAtUtc`
+(the `UserSoftDelete` migration) is a lifecycle fact about the record. Deleting never touches
+`Status`, so restoring a suspended user brings the suspension back exactly — which is why deletion
+is **not** a third `UserStatus` value: folded into the enum, the suspension would be lost and
+restore would have to guess.
+
+Soft-deleted users are invisible to every read and every mutation (`UserNotFoundException`); only
+`RestoreAsync` and `PurgeAsync` see past it, and `User` itself refuses every behaviour method while
+deleted. Their **email stays reserved**, on purpose: the row still holds it in the unique index,
+and eight tables still point at that `UserId`, so handing the address to somebody new would create
+a second person wearing the first one's identity.
+
+`DELETE /api/users/{id}` is the soft one. **`DELETE /api/users/{id}/permanent` really removes the
+row** — a separate route rather than a flag so it cannot be reached by forgetting a default. It
+refuses while a `Membership` exists (the anchor relationship) but still orphans `UserProfile`,
+`UserEducation`, `UserDiscipline`, `TeacherDiscipline`, `TeacherGenre` and `TeacherReview` rows,
+and Agendia keeps its `Employee`. It wants a real cascade before it is used in anger.
+
+And **nothing is authenticated**, so every route is open — `GET /api/users?email=` is a
+user-enumeration oracle and wants an admin policy the moment auth lands, same treatment as
+`/api/agendia/connection`.
+
+Pending: the remaining use cases (create academy, memberships, teaching profile), a **`SaveChanges`
+interceptor** to fill `CreatedAtUtc`/`UpdatedAtUtc`, **signing the user JWTs** Agendia expects
 (HS256 with the shared key, `iss` `SoundMate`, `aud` `MRC.Agendia.Clients`, and the SHORT `sub`
 and `role` claims — the long claim URIs authenticate but then fail every authorization check in
 Agendia), and the **provisioning bridge** `Academy`→`Business` / `Membership`→`Employee`.
