@@ -14,9 +14,23 @@ Scheduling is a **separate microservice, Agendia**, which owns calendars and boo
 - **Agendia** answers *when lessons happen* (recurring "fixed" lessons and one-off ones).
 
 SoundMate validates before delegating: when a booking comes in, it checks the user has an **active
-membership** in that academy (`IMembershipRepository.HasActiveMembershipAsync`), then talks to
-Agendia machine-to-machine. SoundMate must **not** duplicate Agendia's bookings — only reference
-them. More microservices will follow the same pattern.
+membership** in that academy (`IMembershipRepository.HasActiveMembershipAsync`) before calling
+Agendia. SoundMate must **not** duplicate Agendia's bookings — only reference them. More
+microservices will follow the same pattern.
+
+**Which token goes on which call.** Two, and mixing them up is the mistake to avoid:
+
+- **The teacher's own JWT, forwarded.** For anything done *on a person's behalf* — booking,
+  moving or cancelling a lesson. Agendia reads the `sub` to decide what that person owns and
+  writes it to its audit trail. SoundMate signs those tokens; Agendia only validates them.
+- **The machine-to-machine token** (`POST /api/auth/service-token`, `AgendiaServiceTokenProvider`).
+  Only for *provisioning* and service-level calls: creating the Agendia `Business` when an
+  `Academy` is created, the `Employee` when a teacher joins.
+
+Sending everything M2M would work and is tempting, but Agendia's M2M token carries the `Admin`
+role and its `sub` is the **clientId**, not a person: every per-resource check there would pass
+unconditionally, tenant isolation would rest entirely on SoundMate, and Agendia's audit log would
+record `soundmate` instead of the teacher.
 
 ## Commands
 
@@ -124,6 +138,15 @@ repositories for **all 11 aggregates** + the domain test suite (129 tests). DI i
 (`AddInfrastructure` registers the `DbContext`, all repositories and `IUnitOfWork`; called from the
 API's `Program.cs`). The migration has been **applied to a real PostgreSQL database**.
 
+Done, on the **Agendia integration**: the M2M client (`Infrastructure/Agendia/`) authenticates with
+client-credentials, caches the short-lived token, and checks the connection through Agendia's
+`/api/ping`, which echoes back the identity it read. `GET /api/agendia/connection` exposes it in
+**Development only** — SoundMate has no authentication yet, so it would otherwise publish our
+clientId anonymously; gate it behind an admin policy once auth lands rather than deleting it.
+
 Pending: clean the API template leftover (`WeatherForecast*`), and build the Application layer —
 use cases (e.g. register user, create academy), the API endpoints that call them, a **`SaveChanges`
-interceptor** to fill `CreatedAtUtc`/`UpdatedAtUtc`, and the **Agendia** integration.
+interceptor** to fill `CreatedAtUtc`/`UpdatedAtUtc`, **signing the user JWTs** Agendia expects
+(HS256 with the shared key, `iss` `SoundMate`, `aud` `MRC.Agendia.Clients`, and the SHORT `sub`
+and `role` claims — the long claim URIs authenticate but then fail every authorization check in
+Agendia), and the **provisioning bridge** `Academy`→`Business` / `Membership`→`Employee`.
