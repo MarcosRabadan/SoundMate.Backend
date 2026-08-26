@@ -1,0 +1,127 @@
+# Infra local de desarrollo/pruebas de SoundMate (NO es para produccion).
+# Levanta cuatro "cajitas": PostgreSQL (base de datos), Seq (visor de logs), RabbitMQ
+# (broker de mensajeria) y, opcionalmente, la propia API.
+#
+# Uso (desde esta carpeta 'deploy'):
+#   docker compose up -d                    solo la infra (la API la arrancas con dotnet run)
+#   docker compose --profile app up -d      infra + API dentro de un contenedor
+#   docker compose ps                       ver estado
+#   docker compose down                     parar (conserva los datos en los volumenes)
+#
+# UIs / puertos una vez arrancado:
+#   PostgreSQL -> localhost:5434          (db: soundmate  usuario/clave: soundmate)
+#   Seq        -> http://localhost:5342
+#   RabbitMQ   -> http://localhost:15673  (usuario: soundmate  /  clave: soundmate)
+#   API        -> http://localhost:8080/scalar/v1   (solo con --profile app)
+#
+# Los puertos van CORRIDOS respecto a los de Agendia a proposito: 5432 lo ocupa el Postgres
+# nativo de la maquina, y 5433/5341/5672/15672 los ocupa la infra de Agendia. Los dos
+# microservicios se desarrollan a la vez, asi que no pueden pisarse.
+#
+# Versiones FIJADAS a proposito (no 'latest'): asi cualquiera levanta la misma infra con la
+# que se probo. Para actualizar, sube el tag conscientemente.
+
+# El nombre del proyecto, explicito. Docker lo saca de la carpeta si no se dice nada, y esta
+# carpeta tambien se llama 'deploy' en el repo de Agendia: sin esta linea los dos compose
+# compartirian proyecto y un `docker compose down` aqui intentaria tumbar los contenedores
+# del otro servicio.
+name: soundmate
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: soundmate-postgres
+    environment:
+      POSTGRES_USER: soundmate
+      POSTGRES_PASSWORD: soundmate
+      POSTGRES_DB: soundmate
+    ports:
+      - "5434:5432"               # host 5434 -> contenedor 5432 (5432 nativo, 5433 Agendia)
+    volumes:
+      - postgres-data:/var/lib/postgresql/data   # conserva los datos entre reinicios
+    healthcheck:
+      # La API espera a que esto pase antes de arrancar: Postgres acepta conexiones bastante
+      # despues de que el contenedor este "up", y sin la espera el primer arranque falla.
+      test: ["CMD-SHELL", "pg_isready -U soundmate -d soundmate"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  seq:
+    image: datalust/seq:2024.3
+    container_name: soundmate-seq
+    environment:
+      ACCEPT_EULA: "Y"            # acepta la licencia gratuita de Seq
+    ports:
+      - "5342:80"                 # http://localhost:5342 = web de Seq + recepcion de logs
+    volumes:
+      - seq-data:/data            # conserva los logs aunque reinicies la cajita
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management  # "-management" incluye la web de administracion
+    container_name: soundmate-rabbitmq
+    ports:
+      - "5673:5672"               # puerto por el que la app hablara con RabbitMQ (AMQP)
+      - "15673:15672"             # http://localhost:15673 = web de administracion
+    environment:
+      RABBITMQ_DEFAULT_USER: soundmate
+      RABBITMQ_DEFAULT_PASS: soundmate
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  api:
+    # Detras de un perfil: `docker compose up -d` a secas levanta SOLO la infra, que es el dia
+    # a dia (la API con dotnet run y hot reload). El contenedor se pide aparte, cuando quieres
+    # probar la imagen de verdad: `docker compose --profile app up -d --build`.
+    profiles: ["app"]
+    build:
+      context: ..                 # la raiz del repo: el Dockerfile necesita los cuatro .csproj
+      dockerfile: SoundMate.API/Dockerfile
+    image: soundmate-api:dev
+    container_name: soundmate-api
+    ports:
+      - "8080:8080"               # http://localhost:8080/scalar/v1 (5046 lo usa dotnet run)
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
+      # Dentro de la red de compose el host de la base de datos es el NOMBRE DEL SERVICIO y el
+      # puerto es el interno (5432), no el 5434 publicado al host. Credenciales de desarrollo,
+      # por eso pueden estar aqui escritas.
+      ConnectionStrings__SoundMate: "Host=postgres;Port=5432;Database=soundmate;Username=soundmate;Password=soundmate"
+
+      # Agendia corre en el HOST, no en esta red: 'localhost' desde dentro del contenedor seria
+      # el contenedor mismo. De ahi 'host.docker.internal'.
+      #
+      # Y va por HTTPS (7097) aunque Agendia escuche tambien en HTTP (5255): por HTTP contesta
+      # 307 hacia https://host.docker.internal:7097, asi que se acaba en el mismo sitio dando un
+      # salto de mas. Lo que no se puede esquivar es el certificado: el de desarrollo de ASP.NET
+      # se emitio para 'localhost' y su CA no esta en el almacen de confianza del contenedor,
+      # asi que el handshake falla por partida doble. De ahi la linea de abajo.
+      Agendia__BaseUrl: "https://host.docker.internal:7097"
+      Agendia__ClientId: "soundmate"
+
+      # SOLO para este salto contenedor->host en desarrollo: el problema es el certificado
+      # local, no Agendia. En produccion esto aceptaria cualquier certificado de cualquiera y le
+      # entregaria nuestro token de servicio, asi que no se pone en ningun otro sitio.
+      Agendia__DangerousAcceptAnyServerCertificate: "true"
+
+      # El secreto NO se escribe aqui. Fuera del contenedor vive en user-secrets, que el
+      # contenedor no ve; asi que se pasa por entorno desde deploy/.env (mira .env.example).
+      Agendia__ClientSecret: "${AGENDIA_CLIENT_SECRET:-}"
+    extra_hosts:
+      # En Docker Desktop 'host.docker.internal' ya resuelve solo; esta linea hace que tambien
+      # funcione sobre Docker en Linux.
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  seq-data:
+  rabbitmq-data:

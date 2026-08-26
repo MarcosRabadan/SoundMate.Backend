@@ -1,6 +1,22 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path=".dockerignore" />
+    <File Path="CLAUDE.md" />
     <File Path="Directory.Build.props" />
+  </Folder>
+  <Folder Name="/.github/">
+    <File Path=".github/workflows/ci.yml" />
+  </Folder>
+  <Folder Name="/deploy/">
+    <File Path="deploy/.env.example" />
+    <File Path="deploy/README.md" />
+    <File Path="deploy/docker-compose.yml" />
+  </Folder>
+  <Folder Name="/docs/tasks/">
+    <File Path="docs/tasks/agendia-m2m-auth.md" />
+  </Folder>
+  <Folder Name="/docs/wiki/">
+    <File Path="docs/wiki/Home.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="SoundMate.API/SoundMate.Api.csproj" />

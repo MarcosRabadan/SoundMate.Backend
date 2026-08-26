@@ -27,14 +27,35 @@ public static class AgendiaDependencyInjection
                 "Agendia API, e.g. https://localhost:7097.");
         }
 
-        services.AddHttpClient(AgendiaHttpClients.Name, http => http.BaseAddress = new Uri(baseUrl));
+        var named = services.AddHttpClient(AgendiaHttpClients.Name,
+                                           http => http.BaseAddress = new Uri(baseUrl));
 
         // Singleton so the service token is cached across requests: Agendia issues short-lived
         // tokens with no refresh, so re-authenticating per call would double every round trip.
         services.AddSingleton<AgendiaServiceTokenProvider>();
 
-        services.AddHttpClient<IAgendiaClient, AgendiaClient>(http => http.BaseAddress = new Uri(baseUrl));
+        var typed = services.AddHttpClient<IAgendiaClient, AgendiaClient>(
+            http => http.BaseAddress = new Uri(baseUrl));
+
+        // Both clients need the escape hatch, not just one: the token provider uses the named
+        // client and AgendiaClient the typed one, so leaving either out would fail the call on
+        // the authentication leg instead of the request leg.
+        if (section.GetValue<bool>(nameof(AgendiaOptions.DangerousAcceptAnyServerCertificate)))
+        {
+            named.ConfigurePrimaryHttpMessageHandler(CreateCertificateIgnoringHandler);
+            typed.ConfigurePrimaryHttpMessageHandler(CreateCertificateIgnoringHandler);
+        }
 
         return services;
     }
+
+    /// <summary>
+    /// A handler that accepts any server certificate. Only ever reached through
+    /// <see cref="AgendiaOptions.DangerousAcceptAnyServerCertificate"/> — read its docs first.
+    /// </summary>
+    private static HttpMessageHandler CreateCertificateIgnoringHandler() => new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback =
+            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+    };
 }

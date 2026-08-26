@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Variables de entorno de la infra local de Docker (deploy/.env.example es la plantilla).
+deploy/.env
