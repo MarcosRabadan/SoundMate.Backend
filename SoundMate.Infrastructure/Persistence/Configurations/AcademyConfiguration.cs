@@ -44,5 +44,14 @@ internal sealed class AcademyConfiguration : IEntityTypeConfiguration<Academy>
 
         builder.Property(a => a.Status)
             .HasConversion<int>();
+
+        // Computed from DeletedAtUtc, so there is nothing to store. Spelled out rather than left
+        // to convention: a read-only property that EF decides to map is a confusing migration.
+        builder.Ignore(a => a.IsDeleted);
+
+        // Partial index: only the rows that are still alive, which is what every normal read
+        // wants. Postgres keeps it the size of the live set instead of the whole table.
+        builder.HasIndex(a => a.DeletedAtUtc)
+            .HasFilter("\"DeletedAtUtc\" IS NULL");
     }
 }

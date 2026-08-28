@@ -14,6 +14,12 @@ public interface IMembershipRepository
 
     Task<IReadOnlyList<Membership>> ListByUserAsync(UserId userId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Everyone who belongs to that academy. Backed by <c>IX_Memberships_AcademyId</c>, which
+    /// existed for this query before anything could make it.
+    /// </summary>
+    Task<IReadOnlyList<Membership>> ListByAcademyAsync(AcademyId academyId, CancellationToken cancellationToken = default);
+
     Task AddAsync(Membership membership, CancellationToken cancellationToken = default);
 
     void Update(Membership membership);

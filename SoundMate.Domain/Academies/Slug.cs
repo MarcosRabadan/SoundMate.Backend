@@ -19,18 +19,47 @@ public sealed partial class Slug : ValueObject
 
     public static Slug Create(string input)
     {
+        var error = Validate(input, out var value);
+
+        if (error is not null)
+            throw new DomainException(error);
+
+        return new Slug(value);
+    }
+
+    /// <summary>
+    /// True when <see cref="Create"/> would succeed, without paying for an exception.
+    /// <para>
+    /// It exists so a request validator can answer with a per-field message instead of letting an
+    /// invariant be thrown, <b>using this same rule</b>. Anything that reimplements "looks like a
+    /// slug" drifts from this one, and the drift shows up as input that passes validation and then
+    /// fails construction — the exact bug <c>Email.IsValid</c> was added to close.
+    /// </para>
+    /// </summary>
+    public static bool IsValid(string? input) => Validate(input, out _) is null;
+
+    /// <summary>
+    /// The single definition of a well-formed slug. Returns null when <paramref name="input"/> is
+    /// valid, leaving the normalized value in <paramref name="normalized"/>; otherwise returns the
+    /// reason it is not.
+    /// </summary>
+    private static string? Validate(string? input, out string normalized)
+    {
+        normalized = string.Empty;
+
         if (string.IsNullOrWhiteSpace(input))
-            throw new DomainException("Slug is required.");
+            return "Slug is required.";
 
         var value = input.Trim().ToLowerInvariant();
 
         if (value.Length > MaxLength)
-            throw new DomainException($"Slug cannot exceed {MaxLength} characters.");
+            return $"Slug cannot exceed {MaxLength} characters.";
 
         if (!SlugRegex().IsMatch(value))
-            throw new DomainException($"Slug '{input}' only allows lowercase letters, digits and hyphens.");
+            return $"Slug '{input}' only allows lowercase letters, digits and hyphens.";
 
-        return new Slug(value);
+        normalized = value;
+        return null;
     }
 
     protected override IEnumerable<object?> GetEqualityComponents()

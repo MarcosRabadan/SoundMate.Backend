@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Scalar.AspNetCore;
 using SoundMate.API.Filters;
 using SoundMate.API.Middleware;
@@ -13,7 +14,16 @@ builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("So
 builder.Services.AddAgendiaIntegration(builder.Configuration);
 
 // Registered globally so no endpoint has to remember to validate its input.
-builder.Services.AddControllers(options => options.Filters.Add<ValidationFilter>());
+builder.Services
+    .AddControllers(options => options.Filters.Add<ValidationFilter>())
+    .AddJsonOptions(options =>
+    {
+        // Enums travel by name, not by number: "SoloTeacher" instead of 2. The numeric values are
+        // a storage detail (explicit, so reordering cannot corrupt data) and the HTTP contract
+        // should not inherit them. Numbers are still accepted on the way in, so nothing that
+        // already sends them breaks.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 // AddProblemDetails supplies the IProblemDetailsService the handler writes through, so every
 // error leaves as the same RFC 7807 shape.

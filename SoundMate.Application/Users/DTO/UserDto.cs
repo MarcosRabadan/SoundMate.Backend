@@ -1,3 +1,5 @@
+using SoundMate.Domain.Users;
+
 namespace SoundMate.Application.Users.DTO;
 
 /// <summary>
@@ -29,10 +31,15 @@ public sealed record UserDto
     public string? Phone { get; init; }
 
     /// <summary>
-    /// The <c>UserStatus</c> as its name, not its number. The enum's numeric values are a storage
-    /// detail; sending the name keeps the HTTP contract readable and independent of them.
+    /// Whether the account is active or suspended.
+    /// <para>
+    /// A real enum, and it still goes on the wire as a name — <c>"Suspended"</c>, not <c>2</c> —
+    /// because <c>JsonStringEnumConverter</c> is registered globally in <c>Program.cs</c>. The
+    /// numeric values stay a storage detail, OpenAPI documents the allowed set, and C# consumers
+    /// get the type.
+    /// </para>
     /// </summary>
-    public required string Status { get; init; }
+    public required UserStatus Status { get; init; }
 
     /// <summary>When the user registered. UTC, like every instant in SoundMate.</summary>
     public required DateTime CreatedAtUtc { get; init; }

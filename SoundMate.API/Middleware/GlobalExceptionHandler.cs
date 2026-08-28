@@ -36,11 +36,25 @@ internal sealed class GlobalExceptionHandler : IExceptionHandler
             UserNotFoundException e =>
                 (StatusCodes.Status404NotFound, "User not found", e.Message),
 
+            AcademyNotFoundException e =>
+                (StatusCodes.Status404NotFound, "Academy not found", e.Message),
+
             EmailAlreadyRegisteredException e =>
                 (StatusCodes.Status409Conflict, "Email already registered", e.Message),
 
+            SlugAlreadyTakenException e =>
+                (StatusCodes.Status409Conflict, "Slug already taken", e.Message),
+
             UserStillHasMembershipsException e =>
                 (StatusCodes.Status409Conflict, "User still has memberships", e.Message),
+
+            AcademyStillHasMembersException e =>
+                (StatusCodes.Status409Conflict, "Academy still has members", e.Message),
+
+            // 409, not 404: the academy is there and the id is valid, the operation just conflicts
+            // with the state it is in — and the message says which operation was wanted instead.
+            AcademyIsDeletedException e =>
+                (StatusCodes.Status409Conflict, "Academy is deleted", e.Message),
 
             // 400, not 401: the caller is not failing to authenticate, they are supplying a wrong
             // value in a field of a request. SoundMate has no authentication to fail yet anyway.
