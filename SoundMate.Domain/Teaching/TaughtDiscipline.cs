@@ -6,25 +6,25 @@ namespace SoundMate.Domain.Teaching;
 
 /// <summary>
 /// A discipline the teacher specializes in / teaches (global to the person, not per academy).
-/// This is the "teaches" relationship, distinct from <c>UserDiscipline</c> ("studies at a
+/// This is the "teaches" relationship, distinct from <c>StudiedDiscipline</c> ("studies at a
 /// level"): teaching a discipline carries no student level.
 /// </summary>
-public sealed class TeacherDiscipline : AggregateRoot<TeacherDisciplineId>
+public sealed class TaughtDiscipline : AggregateRoot<TaughtDisciplineId>
 {
     public UserId UserId { get; private set; }
     public DisciplineId DisciplineId { get; private set; }
 
-    private TeacherDiscipline() { }
+    private TaughtDiscipline() { }
 
-    private TeacherDiscipline(TeacherDisciplineId id, UserId userId, DisciplineId disciplineId) : base(id)
+    private TaughtDiscipline(TaughtDisciplineId id, UserId userId, DisciplineId disciplineId) : base(id)
     {
         UserId = userId;
         DisciplineId = disciplineId;
     }
 
-    public static TeacherDiscipline Create(UserId userId, DisciplineId disciplineId)
+    public static TaughtDiscipline Create(UserId userId, DisciplineId disciplineId)
         => new(
-            TeacherDisciplineId.New(),
+            TaughtDisciplineId.New(),
             Guard.NotEmpty(userId, "User"),
             Guard.NotEmpty(disciplineId, "Discipline"));
 }

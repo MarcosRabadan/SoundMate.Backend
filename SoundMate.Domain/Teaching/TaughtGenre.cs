@@ -6,25 +6,25 @@ namespace SoundMate.Domain.Teaching;
 
 /// <summary>
 /// A genre the teacher plays/teaches (global to the person). Together with
-/// <c>TeacherDiscipline</c> it makes up the teacher's derived "specialty" (e.g. electric
+/// <c>TaughtDiscipline</c> it makes up the teacher's derived "specialty" (e.g. electric
 /// guitar + metal/rock).
 /// </summary>
-public sealed class TeacherGenre : AggregateRoot<TeacherGenreId>
+public sealed class TaughtGenre : AggregateRoot<TaughtGenreId>
 {
     public UserId UserId { get; private set; }
     public GenreId GenreId { get; private set; }
 
-    private TeacherGenre() { }
+    private TaughtGenre() { }
 
-    private TeacherGenre(TeacherGenreId id, UserId userId, GenreId genreId) : base(id)
+    private TaughtGenre(TaughtGenreId id, UserId userId, GenreId genreId) : base(id)
     {
         UserId = userId;
         GenreId = genreId;
     }
 
-    public static TeacherGenre Create(UserId userId, GenreId genreId)
+    public static TaughtGenre Create(UserId userId, GenreId genreId)
         => new(
-            TeacherGenreId.New(),
+            TaughtGenreId.New(),
             Guard.NotEmpty(userId, "User"),
             Guard.NotEmpty(genreId, "Genre"));
 }

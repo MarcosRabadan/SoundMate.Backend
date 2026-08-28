@@ -178,8 +178,8 @@ internal sealed class UserService : IUserService
     /// database-per-service split stays cheap — and eight tables carry a <c>UserId</c>. Refusing
     /// while a <c>Membership</c> exists covers the anchor relationship, the one that always exists
     /// when the user belongs anywhere. It does not cover the rest: a user with no memberships can
-    /// still leave behind <c>UserProfile</c>, <c>UserEducation</c>, <c>UserDiscipline</c>,
-    /// <c>TeacherDiscipline</c>, <c>TeacherGenre</c> and <c>TeacherReview</c> rows, and Agendia
+    /// still leave behind <c>UserProfile</c>, <c>UserEducation</c>, <c>StudiedDiscipline</c>,
+    /// <c>TaughtDiscipline</c>, <c>TaughtGenre</c> and <c>TeacherReview</c> rows, and Agendia
     /// keeps an <c>Employee</c> pointing at them.
     /// </para>
     /// <para>

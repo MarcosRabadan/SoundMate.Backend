@@ -42,6 +42,15 @@ internal sealed class GlobalExceptionHandler : IExceptionHandler
             UserProfileNotFoundException e =>
                 (StatusCodes.Status404NotFound, "User profile not found", e.Message),
 
+            DisciplineNotFoundException e =>
+                (StatusCodes.Status404NotFound, "Discipline not found", e.Message),
+
+            // 404 and not the one above: "you do not study this" is a different answer from
+            // "there is no such discipline", and a caller needs to know whether to offer an add
+            // button or to fix its selector.
+            StudiedDisciplineNotFoundException e =>
+                (StatusCodes.Status404NotFound, "Studied discipline not found", e.Message),
+
             EmailAlreadyRegisteredException e =>
                 (StatusCodes.Status409Conflict, "Email already registered", e.Message),
 
@@ -53,6 +62,14 @@ internal sealed class GlobalExceptionHandler : IExceptionHandler
 
             AcademyStillHasMembersException e =>
                 (StatusCodes.Status409Conflict, "Academy still has members", e.Message),
+
+            DisciplineAlreadyAddedException e =>
+                (StatusCodes.Status409Conflict, "Discipline already added", e.Message),
+
+            // 409, not 404: the id is real and the caller is not confused about it — the
+            // catalogue just stopped offering it. Whoever already studies it is unaffected.
+            DisciplineNotAvailableException e =>
+                (StatusCodes.Status409Conflict, "Discipline not available", e.Message),
 
             // 409, not 404: the academy is there and the id is valid, the operation just conflicts
             // with the state it is in — and the message says which operation was wanted instead.

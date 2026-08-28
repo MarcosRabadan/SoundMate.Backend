@@ -2,8 +2,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Shouldly;
 using SoundMate.Application.Academies;
+using SoundMate.Application.Disciplines;
 using SoundMate.Application.Users;
 using SoundMate.Domain.Academies;
+using SoundMate.Domain.Disciplines;
 using SoundMate.Domain.Users;
 
 namespace SoundMate.Application.Tests.Common;
@@ -70,6 +72,33 @@ public class JsonContractTests
 
         byNumber!.Type.ShouldBe(AcademyType.SoloTeacher);
         byName!.Type.ShouldBe(AcademyType.SoloTeacher);
+    }
+
+    [Fact]
+    public void A_catalogue_family_goes_out_as_a_name_not_a_number()
+    {
+        var piano = new Discipline(DisciplineId.New(), "Piano", DisciplineCategory.Keyboard);
+
+        var json = JsonSerializer.Serialize(piano.ToDto(), ApiOptions);
+
+        json.ShouldContain("\"category\":\"Keyboard\"");
+        json.ShouldNotContain("\"category\":1");
+    }
+
+    [Fact]
+    public void A_studied_discipline_sends_both_its_enums_as_names()
+    {
+        var piano = new Discipline(DisciplineId.New(), "Piano", DisciplineCategory.Keyboard);
+        var studied = StudiedDiscipline.Create(UserId.New(), piano.Id, MusicLevel.Advanced);
+
+        var json = JsonSerializer.Serialize(studied.ToDto(piano), ApiOptions);
+
+        json.ShouldContain("\"level\":\"Advanced\"");
+        json.ShouldContain("\"category\":\"Keyboard\"");
+
+        // The numeric values are a storage detail. If these appear, the converter is gone.
+        json.ShouldNotContain("\"level\":4");
+        json.ShouldNotContain("\"category\":1");
     }
 
     private sealed record AcademyTypeHolder

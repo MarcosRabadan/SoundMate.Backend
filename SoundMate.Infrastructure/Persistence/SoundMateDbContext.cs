@@ -18,12 +18,12 @@ public sealed class SoundMateDbContext : DbContext
     public DbSet<Academy> Academies => Set<Academy>();
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<Discipline> Disciplines => Set<Discipline>();
-    public DbSet<UserDiscipline> UserDisciplines => Set<UserDiscipline>();
+    public DbSet<StudiedDiscipline> StudiedDisciplines => Set<StudiedDiscipline>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<UserEducation> UserEducations => Set<UserEducation>();
     public DbSet<Genre> Genres => Set<Genre>();
-    public DbSet<TeacherDiscipline> TeacherDisciplines => Set<TeacherDiscipline>();
-    public DbSet<TeacherGenre> TeacherGenres => Set<TeacherGenre>();
+    public DbSet<TaughtDiscipline> TaughtDisciplines => Set<TaughtDiscipline>();
+    public DbSet<TaughtGenre> TaughtGenres => Set<TaughtGenre>();
     public DbSet<TeacherReview> TeacherReviews => Set<TeacherReview>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

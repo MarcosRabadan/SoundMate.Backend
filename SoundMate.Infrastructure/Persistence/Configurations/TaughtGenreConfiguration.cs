@@ -6,16 +6,16 @@ using SoundMate.Domain.Users;
 
 namespace SoundMate.Infrastructure.Persistence.Configurations;
 
-internal sealed class TeacherGenreConfiguration : IEntityTypeConfiguration<TeacherGenre>
+internal sealed class TaughtGenreConfiguration : IEntityTypeConfiguration<TaughtGenre>
 {
-    public void Configure(EntityTypeBuilder<TeacherGenre> builder)
+    public void Configure(EntityTypeBuilder<TaughtGenre> builder)
     {
-        builder.ToTable("TeacherGenres");
+        builder.ToTable("TaughtGenres");
 
         builder.HasKey(tg => tg.Id);
 
         builder.Property(tg => tg.Id)
-            .HasConversion(id => id.Value, value => TeacherGenreId.From(value))
+            .HasConversion(id => id.Value, value => TaughtGenreId.From(value))
             .ValueGeneratedNever();
 
         builder.Property(tg => tg.UserId)

@@ -132,14 +132,21 @@ All projects target `net10.0` with `Nullable` and `ImplicitUsings` enabled. Solu
 - **Identity**: `User` (unique, global person) · `Academy` (organization; `AcademyType.SoloTeacher`
   is a private teacher) · `Membership` (person↔academy with role; the "anchor" that always exists
   when there is any relationship).
-- **Skill**: `MusicLevel` is **per discipline**, held in `UserDiscipline` (user studies discipline
+- **Skill**: `MusicLevel` is **per discipline**, held in `StudiedDiscipline` (user studies discipline
   X at level Y). A teacher-only user simply has no rows. `Discipline` catalog spans instruments and
   music-theory subjects, grouped by `DisciplineCategory` (families + `MusicTheory`).
 - **Teaching profile**: `UserProfile` (bio/avatar, 1:1, anyone) · `UserEducation` (diplomas, 1:N,
-  open year range) · `TeacherDiscipline` + `TeacherGenre` (specialty, **global** to the teacher) ·
+  open year range) · `TaughtDiscipline` + `TaughtGenre` (specialty, **global** to the teacher) ·
   `Genre` catalog · `TeacherReview` (rating **per academy**, 1–5 stars, no self-review). The star
   rating shown is the **average of reviews**, computed on the fly (compute now, cache later only if
   reads hurt) — never a hand-set field.
+- **Studied vs taught** — near-identical tables, kept apart on purpose. `StudiedDiscipline` is
+  what a person **studies** and carries `MusicLevel`; `TaughtDiscipline` / `TaughtGenre` are what
+  they **teach**, global to the person and with no level. Merged, `Level` would have to go
+  nullable and nothing would stop a "teaches" row claiming Advanced. They also answer different
+  questions — *what does Ana study?* is her profile, *who teaches electric guitar?* is the search
+  the product rests on. `TeacherReview` keeps its name: a review really is about the teacher
+  role, and it is per academy.
 
 ## Application conventions (follow these)
 
@@ -242,7 +249,7 @@ a second person wearing the first one's identity.
 `DELETE /api/users/{id}` is the soft one. **`DELETE /api/users/{id}/permanent` really removes the
 row** — a separate route rather than a flag so it cannot be reached by forgetting a default. It
 refuses while a `Membership` exists (the anchor relationship) but still orphans `UserProfile`,
-`UserEducation`, `UserDiscipline`, `TeacherDiscipline`, `TeacherGenre` and `TeacherReview` rows,
+`UserEducation`, `StudiedDiscipline`, `TaughtDiscipline`, `TaughtGenre` and `TeacherReview` rows,
 and Agendia keeps its `Employee`. It wants a real cascade before it is used in anger.
 
 Done, on **academies** (issue #8): the same shape one layer over — `AcademiesController`,
@@ -297,13 +304,43 @@ enforced by the aggregate and *called* by the validator rather than restated in 
 profile is a plain delete — nothing references a `UserProfileId`, so there is nothing to orphan, and
 it is content rather than identity.
 
+Done, on **studied disciplines** (issue #13): the catalogue is finally readable
+(`GET /api/disciplines`, optionally by family) and `GET`/`POST`/`PUT`/`DELETE` live on
+`/api/users/{userId}/studied-disciplines`. 483 tests green.
+
+**The catalogue endpoint is not a nicety, it is what makes the rest usable.**
+`IDisciplineRepository` had existed since #1 with nothing calling it, so a `disciplineId` was
+a seeded GUID no client could know: without a listing there is no selector, and every endpoint
+that takes one was unreachable.
+
+**A retired discipline (`IsActive = false`) cannot be taken up, but the rows that already
+point at it keep working** — they list with their name and their level can still change.
+`IsActive` exists to stop offering something without deleting it: refusing existing rows would
+punish somebody who did nothing, and hiding them would silently erase a level. That is why
+`ListByIdsAsync` deliberately does **not** filter on it while the two listings that feed a
+selector do.
+
+**No bulk replace: one call per discipline.** A `PUT` carrying the whole array is destructive —
+whatever is missing from it gets deleted — so two tabs open and the last save wipes out what
+the other added. A list of disciplines is three to five entries.
+
+The route names the relationship on purpose. `/api/users/{id}/disciplines` would read as the
+union of studying and teaching; `taught-disciplines` is reserved for `TaughtDiscipline`.
+**Who studies a given discipline is deliberately absent** until there is authentication —
+unauthenticated it would be a data-harvesting endpoint, so `IX_StudiedDisciplines_DisciplineId`
+still has no query behind it.
+
 And **nothing is authenticated**, so every route is open — `GET /api/users?email=` is a
 user-enumeration oracle, anyone can open an academy in somebody else's name, and anyone can rewrite
-anyone's bio. All want an admin/self policy the moment auth lands, same treatment as
-`/api/agendia/connection`.
+anyone's bio or give them Superior on the violin. All want an admin/self policy the moment auth
+lands, same treatment as `/api/agendia/connection`.
 
-Pending: the remaining use cases (create academy, memberships, teaching profile), a **`SaveChanges`
-interceptor** to fill `CreatedAtUtc`/`UpdatedAtUtc`, **signing the user JWTs** Agendia expects
-(HS256 with the shared key, `iss` `SoundMate`, `aud` `MRC.Agendia.Clients`, and the SHORT `sub`
-and `role` claims — the long claim URIs authenticate but then fail every authorization check in
-Agendia), and the **provisioning bridge** `Academy`→`Business` / `Membership`→`Employee`.
+Pending: the remaining use cases (memberships, and the teaching side — `TaughtDiscipline`,
+`TaughtGenre`, `UserEducation`, `TeacherReview`), a **`SaveChanges` interceptor** to fill
+`CreatedAtUtc`/`UpdatedAtUtc` — which is **not unblocked yet**: #13 gave the pair to
+`StudiedDiscipline`, but `UserEducation`, `TaughtDiscipline` and `TaughtGenre` still have neither,
+`UserProfile` has only `UpdatedAtUtc` and `TeacherReview` only `CreatedAtUtc` — **signing the user
+JWTs** Agendia expects (HS256 with the shared key, `iss` `SoundMate`, `aud` `MRC.Agendia.Clients`,
+and the SHORT `sub` and `role` claims — the long claim URIs authenticate but then fail every
+authorization check in Agendia), and the **provisioning bridge** `Academy`→`Business` /
+`Membership`→`Employee`.

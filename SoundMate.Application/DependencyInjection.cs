@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using SoundMate.Application.Academies;
+using SoundMate.Application.Disciplines;
 using SoundMate.Application.Users;
 
 namespace SoundMate.Application;
@@ -24,6 +25,11 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IAcademyService, AcademyService>();
+        services.AddScoped<IStudiedDisciplineService, StudiedDisciplineService>();
+
+        // The catalogue: read-only, and the reason the rest is usable at all — a discipline id
+        // is a seeded GUID nobody can guess.
+        services.AddScoped<IDisciplineService, DisciplineService>();
 
         return services;
     }

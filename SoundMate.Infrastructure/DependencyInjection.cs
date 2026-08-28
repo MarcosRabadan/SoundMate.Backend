@@ -28,12 +28,12 @@ public static class DependencyInjection
         services.AddScoped<IAcademyRepository, AcademyRepository>();
         services.AddScoped<IMembershipRepository, MembershipRepository>();
         services.AddScoped<IDisciplineRepository, DisciplineRepository>();
-        services.AddScoped<IUserDisciplineRepository, UserDisciplineRepository>();
+        services.AddScoped<IStudiedDisciplineRepository, StudiedDisciplineRepository>();
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddScoped<IUserEducationRepository, UserEducationRepository>();
         services.AddScoped<IGenreRepository, GenreRepository>();
-        services.AddScoped<ITeacherDisciplineRepository, TeacherDisciplineRepository>();
-        services.AddScoped<ITeacherGenreRepository, TeacherGenreRepository>();
+        services.AddScoped<ITaughtDisciplineRepository, TaughtDisciplineRepository>();
+        services.AddScoped<ITaughtGenreRepository, TaughtGenreRepository>();
         services.AddScoped<ITeacherReviewRepository, TeacherReviewRepository>();
 
         return services;

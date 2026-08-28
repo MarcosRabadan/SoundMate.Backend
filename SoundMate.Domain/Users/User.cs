@@ -5,7 +5,7 @@ namespace SoundMate.Domain.Users;
 /// <summary>
 /// The person: unique and global across all of SoundMate. The role they play in each place
 /// is NOT here (that is a <c>Membership</c>), and neither is their musical skill (that is
-/// <c>UserDiscipline</c>). Created and mutated only through its own methods, so it can never
+/// <c>StudiedDiscipline</c>). Created and mutated only through its own methods, so it can never
 /// exist without an email or a name.
 /// </summary>
 public sealed class User : AggregateRoot<UserId>

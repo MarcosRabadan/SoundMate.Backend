@@ -28,4 +28,17 @@ internal sealed class DisciplineRepository : IDisciplineRepository
             .Where(d => d.Category == category && d.IsActive)
             .OrderBy(d => d.Name)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Discipline>> ListByIdsAsync(IReadOnlyCollection<DisciplineId> ids,
+                                                                CancellationToken cancellationToken = default)
+    {
+        // An empty IN () is a query with no possible answer; skipping it saves the round trip.
+        if (ids.Count == 0)
+            return [];
+
+        // No IsActive filter here, on purpose — see the interface.
+        return await _context.Disciplines
+            .Where(d => ids.Contains(d.Id))
+            .ToListAsync(cancellationToken);
+    }
 }
