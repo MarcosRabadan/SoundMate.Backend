@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path=".dockerignore" />
+    <File Path="CHANGELOG.md" />
     <File Path="CLAUDE.md" />
     <File Path="Directory.Build.props" />
   </Folder>
@@ -16,7 +17,9 @@
     <File Path="docs/tasks/agendia-m2m-auth.md" />
   </Folder>
   <Folder Name="/docs/wiki/">
-    <File Path="docs/wiki/Home.md" />
+    <File Path="docs/wiki/README.md" />
+    <File Path="docs/wiki/v0.1.0.md" />
+    <File Path="docs/wiki/v0.2.0.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="SoundMate.API/SoundMate.Api.csproj" />

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Scalar.AspNetCore;
+using SoundMate.API;
 using SoundMate.API.Filters;
 using SoundMate.API.Middleware;
 using SoundMate.Application;
@@ -31,7 +32,17 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    // Without this the document says "1.0.0" forever, which is worse than saying nothing: a
+    // consumer reading the spec would think the contract had never moved.
+    options.AddDocumentTransformer((document, _, _) =>
+    {
+        document.Info.Title = $"{BuildInfo.Product} API";
+        document.Info.Version = BuildInfo.Version;
+        return Task.CompletedTask;
+    });
+});
 
 var app = builder.Build();
 
@@ -43,7 +54,7 @@ if (app.Environment.IsDevelopment())
 {
     // MapOpenApi only serves the JSON document; Scalar is the UI on top of it.
     app.MapOpenApi();
-    app.MapScalarApiReference(options => options.WithTitle("SoundMate API"));
+    app.MapScalarApiReference(options => options.WithTitle($"{BuildInfo.Product} API {BuildInfo.Version}"));
 }
 
 // Inside a container the app listens on HTTP only: the ASP.NET dev certificate is not there

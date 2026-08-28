@@ -178,6 +178,20 @@ the domain.
 as `SoundMate.Infrastructure.Tests`. `FakeUnitOfWork.FailWithUniqueViolationOn` exists to reach the
 lost-race path, which no amount of in-memory set-up reproduces on its own.
 
+## Versioning and docs
+
+- **One version, one place**: `<Version>` in `Directory.Build.props`. The SDK stamps it onto every
+  assembly, `API/BuildInfo.cs` reads it back from the attributes, and from there it reaches the
+  OpenAPI document, the Scalar title and `GET /api/version`. **Never hardcode a version anywhere
+  else** — two places to change is one place to forget.
+- **SemVer, and MAJOR is 0**, so the HTTP contract is not stable: a MINOR bump may break it. Saying
+  so is `CHANGELOG.md`'s job, under **Cambios incompatibles**.
+- **Every MINOR gets a page in `docs/wiki/`** (`vX.Y.Z.md`), with a functional half and a technical
+  half, and a row in `docs/wiki/README.md`. Old pages are kept and marked historical rather than
+  edited — the point of a version page is what was true then. Same shape as Agendia's wiki.
+- `CHANGELOG.md` is for what a user or a developer would notice. Refactors that change nothing
+  observable do not belong in it; they belong here.
+
 ## Current state
 
 Done: full rich domain model + EF configurations + `InitialIdentity` migration (seeded catalogs) +
@@ -233,7 +247,7 @@ and Agendia keeps its `Employee`. It wants a real cascade before it is used in a
 
 Done, on **academies** (issue #8): the same shape one layer over — `AcademiesController`,
 `AcademyService`, `AcademyMapper`, validators, and `Academy` given the same soft delete as `User`
-(`AcademySoftDelete` migration). 382 tests green.
+(`AcademySoftDelete` migration). 387 tests green.
 
 **`Cancel` used to be a one-way door**, and combined with the soft delete it was a dead end: a
 cancelled academy that was also deleted came back cancelled from `Restore`, and nothing could move
