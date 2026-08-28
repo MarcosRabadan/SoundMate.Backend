@@ -34,12 +34,10 @@ public class UserMapperTests
     }
 
     [Theory]
-    [InlineData(false, "Active")]
-    [InlineData(true, "Suspended")]
-    public void Publishes_the_status_by_name_not_by_number(bool suspend, string expected)
+    [InlineData(false, UserStatus.Active)]
+    [InlineData(true, UserStatus.Suspended)]
+    public void Carries_the_status_across(bool suspend, UserStatus expected)
     {
-        // The enum's numbers are a storage detail — UserConfiguration persists them as int with
-        // explicit values. The HTTP contract must not inherit that.
         var user = User.Register(Email.Create("ana@example.com"), "irrelevant-hash", "Ana García");
         if (suspend) user.Suspend();
 

@@ -25,7 +25,7 @@ internal static class UserMapper
         Email = user.Email.Value,
         FullName = user.FullName,
         Phone = user.Phone,
-        Status = user.Status.ToString(),
+        Status = user.Status,
         CreatedAtUtc = user.CreatedAtUtc
     };
 }

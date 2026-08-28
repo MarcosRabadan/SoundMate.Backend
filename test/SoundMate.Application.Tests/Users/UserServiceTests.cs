@@ -45,7 +45,7 @@ public class UserServiceTests
 
         dto.Email.ShouldBe("ana@example.com");
         dto.FullName.ShouldBe("Ana García");
-        dto.Status.ShouldBe(nameof(UserStatus.Active));
+        dto.Status.ShouldBe(UserStatus.Active);
         dto.Id.ShouldNotBe(Guid.Empty);
 
         _users.Added.Count.ShouldBe(1);
@@ -270,8 +270,8 @@ public class UserServiceTests
     {
         var registered = await RegisterAsync();
 
-        (await _service.SuspendAsync(registered.Id)).Status.ShouldBe(nameof(UserStatus.Suspended));
-        (await _service.ReactivateAsync(registered.Id)).Status.ShouldBe(nameof(UserStatus.Active));
+        (await _service.SuspendAsync(registered.Id)).Status.ShouldBe(UserStatus.Suspended);
+        (await _service.ReactivateAsync(registered.Id)).Status.ShouldBe(UserStatus.Active);
     }
 
     [Fact]
@@ -406,7 +406,7 @@ public class UserServiceTests
 
         var restored = await _service.RestoreAsync(registered.Id);
 
-        restored.Status.ShouldBe(nameof(UserStatus.Suspended));
+        restored.Status.ShouldBe(UserStatus.Suspended);
     }
 
     [Fact]

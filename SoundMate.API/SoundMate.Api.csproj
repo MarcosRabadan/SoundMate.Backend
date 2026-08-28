@@ -22,8 +22,4 @@
     <ProjectReference Include="..\SoundMate.Infrastructure\SoundMate.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
 </Project>

@@ -231,9 +231,41 @@ refuses while a `Membership` exists (the anchor relationship) but still orphans 
 `UserEducation`, `UserDiscipline`, `TeacherDiscipline`, `TeacherGenre` and `TeacherReview` rows,
 and Agendia keeps its `Employee`. It wants a real cascade before it is used in anger.
 
+Done, on **academies** (issue #8): the same shape one layer over — `AcademiesController`,
+`AcademyService`, `AcademyMapper`, validators, and `Academy` given the same soft delete as `User`
+(`AcademySoftDelete` migration). 382 tests green.
+
+**`Cancel` used to be a one-way door**, and combined with the soft delete it was a dead end: a
+cancelled academy that was also deleted came back cancelled from `Restore`, and nothing could move
+it out of that state — its slug stayed held, its history stranded. `Academy.Reopen()` /
+`POST /api/academies/{id}/reopen` is the way out. It is deliberately narrow: it only undoes a
+cancellation, so a **suspended** academy stays suspended — lifting a suspension is `Activate`'s
+job, and doing both here would let a reopen quietly wave away a moderation decision.
+
+Three things were fixed in the domain on the way. **`Slug.IsValid`** now exists, for the reason
+`Email.IsValid` does. **`Academy`'s guard was incomplete**: `EnsureNotCancelled` only covered
+`Suspend`/`Activate`, so a cancelled academy could still be renamed, re-slugged and moved between
+plans — it now guards every mutator, deleted included. And **two indexes existed for queries
+nothing could make**: `IX_Academies_OwnerId` and `IX_Memberships_AcademyId` now have
+`ListByOwnerAsync` and `ListByAcademyAsync` behind them.
+
+**Creating an academy also creates its owner's `Owner` membership, in the same `SaveChanges`.**
+Not a convenience: `Membership` is the anchor, and `HasActiveMembershipAsync` is the gate every
+booking passes, so an academy without it would be born claiming its owner does not belong to it.
+
+Enums cross the wire **by name** (`"SoloTeacher"`, not `2`) via `JsonStringEnumConverter` in
+`Program.cs`; numbers are still accepted inbound. The numeric values are a storage detail and the
+HTTP contract should not inherit them.
+
+**Response DTOs therefore hold real enums, not strings.** With that converter registered the wire
+format is identical either way, so the string bought nothing and cost the type, the OpenAPI enum
+documentation, and a `.ToString()` per field. It does mean the contract depends on a registration
+in another project that nothing else would miss — so `JsonContractTests` asserts the serialized
+shape directly. Remove the converter and those tests fail, instead of every consumer.
+
 And **nothing is authenticated**, so every route is open — `GET /api/users?email=` is a
-user-enumeration oracle and wants an admin policy the moment auth lands, same treatment as
-`/api/agendia/connection`.
+user-enumeration oracle, and anyone can open an academy in somebody else's name. Both want an
+admin/self policy the moment auth lands, same treatment as `/api/agendia/connection`.
 
 Pending: the remaining use cases (create academy, memberships, teaching profile), a **`SaveChanges`
 interceptor** to fill `CreatedAtUtc`/`UpdatedAtUtc`, **signing the user JWTs** Agendia expects

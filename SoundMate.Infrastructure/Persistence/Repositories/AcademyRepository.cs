@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SoundMate.Application.Abstractions.Persistence;
 using SoundMate.Domain.Academies;
+using SoundMate.Domain.Users;
 
 namespace SoundMate.Infrastructure.Persistence.Repositories;
 
@@ -18,6 +19,11 @@ internal sealed class AcademyRepository : IAcademyRepository
 
     public Task<bool> ExistsBySlugAsync(Slug slug, CancellationToken cancellationToken = default)
         => _context.Academies.AnyAsync(a => a.Slug == slug, cancellationToken);
+
+    public async Task<IReadOnlyList<Academy>> ListByOwnerAsync(UserId ownerId, CancellationToken cancellationToken = default)
+        => await _context.Academies
+            .Where(a => a.OwnerId == ownerId)
+            .ToListAsync(cancellationToken);
 
     public async Task AddAsync(Academy academy, CancellationToken cancellationToken = default)
         => await _context.Academies.AddAsync(academy, cancellationToken);

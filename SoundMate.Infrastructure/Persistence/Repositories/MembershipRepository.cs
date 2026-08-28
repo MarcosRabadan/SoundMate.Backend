@@ -30,6 +30,11 @@ internal sealed class MembershipRepository : IMembershipRepository
             .Where(m => m.UserId == userId)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Membership>> ListByAcademyAsync(AcademyId academyId, CancellationToken cancellationToken = default)
+        => await _context.Memberships
+            .Where(m => m.AcademyId == academyId)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(Membership membership, CancellationToken cancellationToken = default)
         => await _context.Memberships.AddAsync(membership, cancellationToken);
 
