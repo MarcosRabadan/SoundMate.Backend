@@ -39,6 +39,9 @@ internal sealed class GlobalExceptionHandler : IExceptionHandler
             AcademyNotFoundException e =>
                 (StatusCodes.Status404NotFound, "Academy not found", e.Message),
 
+            UserProfileNotFoundException e =>
+                (StatusCodes.Status404NotFound, "User profile not found", e.Message),
+
             EmailAlreadyRegisteredException e =>
                 (StatusCodes.Status409Conflict, "Email already registered", e.Message),
 

@@ -23,10 +23,12 @@ internal sealed class UserProfileConfiguration : IEntityTypeConfiguration<UserPr
         // One profile per user.
         builder.HasIndex(p => p.UserId).IsUnique();
 
+        // Widths come from the aggregate, not from a number repeated here: the domain enforces the
+        // same limits, and two copies would eventually disagree.
         builder.Property(p => p.Description)
-            .HasMaxLength(2000);
+            .HasMaxLength(UserProfile.MaxDescriptionLength);
 
         builder.Property(p => p.AvatarUrl)
-            .HasMaxLength(500);
+            .HasMaxLength(UserProfile.MaxAvatarUrlLength);
     }
 }

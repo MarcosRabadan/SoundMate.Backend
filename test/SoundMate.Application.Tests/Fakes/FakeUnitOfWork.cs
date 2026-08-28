@@ -12,14 +12,34 @@ namespace SoundMate.Application.Tests.Fakes;
 /// </summary>
 internal sealed class FakeUnitOfWork : IUnitOfWork
 {
-    /// <summary>When set, the next save throws as if this index had rejected the write.</summary>
+    /// <summary>When set, <b>every</b> save throws as if this index had rejected the write.</summary>
     public string? FailWithUniqueViolationOn { get; set; }
+
+    /// <summary>
+    /// When set, only the <b>next</b> save throws; the ones after it succeed.
+    /// <para>
+    /// That asymmetry is the point: a recovery that re-reads the winning row and saves again can
+    /// only be tested if the second save is allowed to work. With the always-fail flag the retry
+    /// would look like an infinite loop rather than a fix.
+    /// </para>
+    /// </summary>
+    public string? FailNextSaveWithUniqueViolationOn { get; set; }
 
     public int SaveCount { get; private set; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         SaveCount++;
+
+        if (FailNextSaveWithUniqueViolationOn is not null)
+        {
+            var constraint = FailNextSaveWithUniqueViolationOn;
+            FailNextSaveWithUniqueViolationOn = null;
+
+            throw new UniqueConstraintViolationException(
+                constraint,
+                new InvalidOperationException("simulated 23505"));
+        }
 
         if (FailWithUniqueViolationOn is not null)
         {

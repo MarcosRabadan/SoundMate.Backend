@@ -22,6 +22,7 @@ public static class DependencyInjection
 
         // Mapping needs nothing registered: it is static extension methods (see UserMapper).
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IAcademyService, AcademyService>();
 
         return services;

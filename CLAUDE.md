@@ -277,9 +277,30 @@ documentation, and a `.ToString()` per field. It does mean the contract depends 
 in another project that nothing else would miss — so `JsonContractTests` asserts the serialized
 shape directly. Remove the converter and those tests fail, instead of every consumer.
 
+Done, on the **user profile** (issue #11): `GET`/`PUT`/`DELETE` on
+`/api/users/{userId}/profile` — a singleton sub-resource, because the profile is only ever reached
+through its owner and a `UserProfileId` never leaves the database. 440 tests green.
+
+**`PUT` is an upsert, and that is the interesting part.** It creates the profile when there is none,
+so a caller never has to find out first whether a row exists. Which means losing the race against
+`IX_UserProfiles_UserId` must **not** answer 409 — a PUT promises idempotence and the resource now
+exists — so the service re-reads the winning row and applies to it. That retry only works because
+`UnitOfWork` now **detaches the entries a failed save left behind**: they stay `Added` otherwise and
+the next `SaveChanges` replays the very insert the index rejected.
+
+`PUT` also replaces the whole profile: a body with only a description **clears the avatar**. An
+empty profile is a legitimate state, and distinct from having none — hence two different 404s,
+`UserNotFoundException` and `UserProfileNotFoundException`.
+
+`UserProfile.IsValidAvatarUrl` follows `Email.IsValid` and `Slug.IsValid`: absolute http(s) only,
+enforced by the aggregate and *called* by the validator rather than restated in it. Deleting a
+profile is a plain delete — nothing references a `UserProfileId`, so there is nothing to orphan, and
+it is content rather than identity.
+
 And **nothing is authenticated**, so every route is open — `GET /api/users?email=` is a
-user-enumeration oracle, and anyone can open an academy in somebody else's name. Both want an
-admin/self policy the moment auth lands, same treatment as `/api/agendia/connection`.
+user-enumeration oracle, anyone can open an academy in somebody else's name, and anyone can rewrite
+anyone's bio. All want an admin/self policy the moment auth lands, same treatment as
+`/api/agendia/connection`.
 
 Pending: the remaining use cases (create academy, memberships, teaching profile), a **`SaveChanges`
 interceptor** to fill `CreatedAtUtc`/`UpdatedAtUtc`, **signing the user JWTs** Agendia expects
