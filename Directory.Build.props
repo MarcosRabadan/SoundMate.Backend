@@ -1,8 +1,17 @@
 <Project>
 
-  <!-- Single source of truth for the version across every project (SemVer: MAJOR.MINOR.PATCH). -->
+  <!--
+    Single source of truth for the version across every project (SemVer: MAJOR.MINOR.PATCH).
+
+    Bumping it here moves the assemblies, the OpenAPI document and GET /api/version together.
+    Nothing else may hardcode a version number: two places to change is one place to forget.
+
+    While MAJOR is 0 the HTTP contract is not stable — a MINOR bump is allowed to break it, and
+    saying so is what CHANGELOG.md is for. Each MINOR also gets its own page in docs/wiki/, with
+    the functional and the technical story of what changed.
+  -->
   <PropertyGroup>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Product>SoundMate</Product>
   </PropertyGroup>
 
